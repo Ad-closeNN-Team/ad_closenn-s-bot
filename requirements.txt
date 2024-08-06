@@ -1,0 +1,4 @@
+sparkdesk-api
+websocket-client
+discord.py
+pyhandytools
