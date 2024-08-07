@@ -5,23 +5,46 @@ from sparkdesk_web.core import SparkWeb
 from sparkdesk_api.core import SparkAPI
 from websocket import create_connection, WebSocketConnectionClosedException
 import textwrap
-import logging
-import requests
+import datetime
 import os
+from discord.ui import Button, View
+# 获取当前启动的时间
+local_time = datetime.datetime.now()
+formatted_time = local_time.strftime("%Y/%m/%d %H:%M:%S")  # 自定义时间格式
+
+class logger:
+    def __init__(self, log):
+        self.log = log
+    
+    def _write_log(self, message):
+        #写入日志
+        with open('log/log.log', "a", encoding="utf-8") as late_to_write:
+            late_to_write.write('\n'+message)
+            print(message)    
+    def info(self):
+        real_log = f'{formatted_time} [INFO] {self.log}'
+        self._write_log(real_log)
+    
+    def warning(self):
+        real_log = f'{formatted_time} [WARNING] {self.log}'
+        self._write_log(real_log)
+    
+    def error(self):
+        real_log = f'{formatted_time} [ERROR] {self.log}'
+        self._write_log(real_log)
+
 if not os.path.exists('log'):
     os.mkdir('log')
-    logging.info('[System] 由于未找到 log 文件夹，所以已自动创建。')
-#LOGGING 日志
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler('log/log.log', encoding='utf-8'),  # 日志文件路径
-        logging.StreamHandler()  # 同时也输出到控制台
-    ]
-)
-logger = logging.getLogger()
-logging.info('\n--------------------\n已重新开始运行 - Restarted\n--------------------')
+    create_log = open("log//log.log", "w")
+    create_log.write("", encoding='utf-8')
+    create_log.close()
+    logger('[System] 由于未找到 log 文件夹，所以已自动创建。').info()
+if not os.path.exists('log/log.log'):
+    create_log = open("log//log.log", "w", encoding='utf-8')
+    create_log.write("")
+    create_log.close()
+    logger('[System] 由于未找到 log 文件夹，所以已自动创建。').info()
+logger('\n--------------------\n已重新开始运行 - Restarted\n--------------------').warning()
 
 intents = discord.Intents.default()
 intents.message_content = True  # 启用消息内容权限
@@ -29,26 +52,14 @@ intents.message_content = True  # 启用消息内容权限
 client = commands.Bot(command_prefix="!", intents=intents)
 
 # 事件: 当机器人准备好时触发
-ping_time = 1 #循环响应的时间（每次），单位为 分钟 (minute)
 @client.event
 async def on_ready():
     print(f'Logged in as {client.user}!')
-    logging.info(f'[Sytsem] Bot 账户已设置为 {client.user}。')
+    logger(f'[Sytsem] Bot 账户已设置为 {client.user}。').info()
     await client.tree.sync()  # 同步命令
-    logging.info('[System] 已开始同步指令。')
-    auto_print.start() #做响应，防止被 GitHub 误认为休眠
-    logging.info(f'[System] Bot 循环响应已启动。已设置为每 {ping_time} 分钟执行一次自我响应。')
-    logging.info('[System] Bot 已准备就绪。')
-import os
-@tasks.loop(minutes=ping_time)  # 设置任务每隔 {ping_time} 分钟运行一次
-async def auto_print(): 
-    channel = client.get_channel(1270028599835103343)
-    await channel.send('这是自动消息，以防止机器人被 GitHub 关闭。')
-    requests.get('https://google.com')
-    #os.system('curl www.google.com')
-    print(f'[Task] 任务执行成功。每隔 {ping_time} 分钟自动响应机器人防止被 GitHub 关闭。已开始下一次响应的计时。')
-    logging.info(f'[Task] 任务执行成功。每隔 {ping_time} 分钟自动响应机器人防止被 GitHub 关闭。已开始下一次响应的计时。')
-
+    logger('[System] 已开始同步指令。').info()
+    logger('[System] Bot 已准备就绪。').info()
+    await client.tree.sync()
 # 斜杠命令: /hello
 @client.tree.command(name="hello", description="Say hello")
 async def hello(interaction: discord.Interaction):
@@ -57,6 +68,7 @@ async def hello(interaction: discord.Interaction):
 # command: /help
 @client.tree.command(name="help", description="查看 Ad_cloesNN's bot 帮助列表")
 async def help(interaction: discord.Interaction):
+
     help_list="""
 # Ad_closeNN's bot 的指令帮助
 :bell:
@@ -67,6 +79,8 @@ async def help(interaction: discord.Interaction):
 5.使用`/translate`将使用 SparkAI 讯飞星火大模型进行一次翻译（默认翻译为**简体中文（中国大陆）**）
 6.使用`/cat_girl`来与模拟**猫娘**后的 SparkAI 讯飞星火大模型进行一次对话（无法连续对话、无记忆）（默认使用@和API模式，无法切换到Web模式）
 7.使用`/multi_ping`来多次@同一个人，可自定义@次数（默认为5次，最低为1次，最高为20次）
+8.使用`/sync`来立即同步一次命令
+9.使用`/delete_log`来删除log（仅限指定人使用）
 :warning:
 1.`/chat`默认使用的是API模式，API模式可能会比Web模式稍微慢一点，但是输出的效果一般会比Web模式好，建议优先选择API模式）
 2.`/translate`默认将文本翻译成简体中文（中国大陆）
@@ -109,11 +123,11 @@ async def chat(interaction: discord.Interaction, message: str, mode: str = 'api'
  # single chat
     if not message:
         await interaction.response.send_message("你需要提供一个信息！", ephemeral=False)
-        logging.warning(f'[/chat] @{username}：你需要提供一个信息！')
+        logger(f'[/chat] @{username}：你需要提供一个信息！').warning()
         return
     # 发送临时响应
     ping_mention = interaction.user.mention if ping == 'on' else ''
-    logging.info(f"[/chat] @{username} 刚刚请求了 SparkAI 进行一次对话。")
+    logger(f"[/chat] @{username} 刚刚请求了 SparkAI 进行一次对话。").info()
     await interaction.response.send_message(f"{ping_mention}你的提问是 ：**{message}**\n正在等待 SparkAI 的响应...", ephemeral=False)
 
     try:
@@ -185,7 +199,7 @@ async def chat(interaction: discord.Interaction, message: str, mode: str = 'api'
             offical_api()
             END_SPARKAI_DOMAIN = "4.0Ultra"
         username = interaction.user.name
-        logging.info(f"@{username} just used a token with {chat_mode} mode in normal mode.")
+        logger(f"[/chat] @{username} 刚刚在普通聊天模式使用了 {chat_mode} 的方式消耗了 Token。").info()
         # 更新之前的响应
         if need_warp == "yes":
             for part in new_response:
@@ -195,10 +209,10 @@ async def chat(interaction: discord.Interaction, message: str, mode: str = 'api'
     except Exception as e:
         print(f"An error occurred: {e}")
         await interaction.edit_original_response(content=f"{ping_mention}机器人似乎遇到问题，请重试。请及时@管理员或者服务器Owner。错误代码：\nAn error occurred: {e}")
-        logging.error(f"[/chat] 遇到错误。错误代码: {e}。")
+        logger(f"[/chat] 遇到错误。错误代码: {e}。").error()
 
 # 斜杠命令: /translate
-@client.tree.command(name="translate", description="Chat with SparkAI!")
+@client.tree.command(name="translate", description="让 SparkAI 翻译一句话")
 @app_commands.describe(
     origin="需要翻译的消息",
     language="选择翻译后的语言",
@@ -245,7 +259,7 @@ async def chat(interaction: discord.Interaction, message: str, mode: str = 'api'
 async def translate(interaction: discord.Interaction, origin: str, language: str = 'zh-cn', ping: str = 'on'):
         username = interaction.user.name
         ping_mention = interaction.user.mention if ping == 'on' else ''
-        logging.info(f"[/translate] @{username} 刚刚请求了 SparkAI 进行一次翻译。")
+        logger(f"[/translate] @{username} 刚刚请求了 SparkAI 进行一次翻译。").info()
         await interaction.response.send_message(f"{ping_mention}正在**翻译**...请**稍等**...", ephemeral=False)
         try:
             def translate_offical_api():
@@ -292,7 +306,7 @@ async def translate(interaction: discord.Interaction, origin: str, language: str
                     need_warp = "no"
             translate_offical_api()
             username = interaction.user.name
-            logging.info(f"[/translate] @{username} 刚刚使用了一次 Translate 的 Token。")
+            logger(f"[/translate] @{username} 刚刚使用了一次 Translate 的 Token。").info()
             if need_warp == "yes":
                 for part in new_response:
                     await interaction.channel.send(content=f"{ping_mention}翻译完毕。翻译后语言：{language}。\n**--------------------**\n{part}")
@@ -301,7 +315,7 @@ async def translate(interaction: discord.Interaction, origin: str, language: str
         except Exception as e:
             print(f"An error occurred: {e}")
             await interaction.edit_original_response(content=f"{ping_mention}机器人似乎遇到问题，请重试。如果需要，请及时@管理员或者服务器Owner。错误代码：\nAn error occurred: {e}")
-            logging.error(f"[/translate] 遇到错误。错误代码: {e}。")
+            logger(f"[/translate] 遇到错误。错误代码: {e}。").error()
 
 @client.tree.command(name="ping", description="检查机器人与请求人之间的延迟")
 async def ping(interaction: discord.Interaction):
@@ -310,20 +324,20 @@ async def ping(interaction: discord.Interaction):
     # 记录命令触发时的时间戳
     start_time = time.time()
     # 发送临时响应，确保消息被发送
-    logging.info(f'[/ping] @{username}请求与bot进行ping测试。')
+    logger(f'[/ping] @{username}请求与bot进行ping测试。').info()
     await interaction.response.send_message("正在计算你的延迟...", ephemeral=True)
     # 计算延迟
     latency = (time.time() - start_time) * 1000  # 转换为毫秒
     # 更新响应消息
     await interaction.edit_original_response(content=f":ping_pong: Pong! 你的延迟为 {latency:.2f} 毫秒。")
-    logging.info(f'[/ping] 测试结束，@{username}的ping值为{latency:.2f}毫秒(ms)')
+    logger(f'[/ping] 测试结束，@{username}的ping值为{latency:.2f}毫秒(ms)').info()
 #斜杠命令:/multi@
 @client.tree.command(name="multi_ping", description="多次@一个人，可自定义@次数，小心被打！")
 @app_commands.describe(
     times="设置@的次数（只能为整数）")
 async def multi_ping( interaction: discord.Interaction, member: discord.Member, times: int = 5):
     username = interaction.user.name
-    logging.info(f'@{username} 已请求bot@ @{member} {times}次。')
+    logger(f'@{username} 已请求bot@ @{member} {times}次。').info()
     async def check():
         global execute_times
         if 0 < times <=20:
@@ -331,10 +345,10 @@ async def multi_ping( interaction: discord.Interaction, member: discord.Member, 
             await interaction.response.send_message(f'由 **@{username}**发送的@请求。\n一共@{times}次，剩余{times-1}次。**[1/{times}]**\n{member.mention}')
             for i in range(execute_times - 1):
                 await interaction.followup.send(f"**[{i+2}/{times}]** 来自 **@{username}**\n{member.mention}")
-            logging.info(f'@{username} 已成功让bot@ @{member} {times}次。')
+            logger(f'@{username} 已成功让bot@ @{member} {times}次。').info()
         else:
             await interaction.response.send_message(f'遇到错误。你请求的@次数不正确，请确保你请求@别人的次数**小于**或**等于**`20`次并且**大于**或**等于**`1`次。目前不支持一次性@超过20次和小于1次。你目前想一次性@{member} {times}次。')
-            logging.error(f'[/multi_ping] @{username} 在尝试@ @{member} 的时候出现了错误，ta输入的数据为 {times} ：遇到错误。你请求的@次数不正确，请确保你请求@别人的次数小于或等于 20 次并且大于或等于 1 次。目前不支持一次性@超过20次和小于1次。你目前想一次性@{member} {times}次。')
+            logger(f'[/multi_ping] @{username} 在尝试@ @{member} 的时候出现了错误，ta输入的数据为 {times} ：遇到错误。你请求的@次数不正确，请确保你请求@别人的次数小于或等于 20 次并且大于或等于 1 次。目前不支持一次性@超过20次和小于1次。你目前想一次性@{member} {times}次。').error()
     await check()
 
 #斜杠命令:/cat_girl
@@ -353,7 +367,7 @@ async def cat_girl(interaction: discord.Interaction, message: str, ping: str = "
         ping_mention = interaction.user.mention if ping == 'on' else ''
         await interaction.response.send_message(f"{ping_mention}你使用了**猫娘模式**！\n你的提问是 ：**{message}**\n正在等待 SparkAI 的响应...", ephemeral=False)
         username = interaction.user.name
-        logging.info(f'[/cat_girl] @{username} 刚刚请求了 SparkAI 进行一次 猫娘 对话。')
+        logger(f'[/cat_girl] @{username} 刚刚请求了 SparkAI 进行一次 猫娘 对话。').info()
         try:
             def translate_offical_api():
                 global SPARKAI_DOMAIN
@@ -399,7 +413,7 @@ async def cat_girl(interaction: discord.Interaction, message: str, ping: str = "
                     need_warp = "no"
             translate_offical_api()
             username = interaction.user.name
-            logging.info(f"[/cat_girl]@{username} just used a token with API mode in cat_girl mode.")
+            logger(f"[/cat_girl] @{username} 刚刚在猫娘聊天模式使用了 API 的方式消耗了 Token。").info()
             if need_warp == "yes":
                 await interaction.channel.send(content=f"{ping_mention}你使用了**猫娘模式**！\n你的提问是 ：**{message}")
                 await interaction.channel.send(content=f"她的回答是：")
@@ -410,8 +424,104 @@ async def cat_girl(interaction: discord.Interaction, message: str, ping: str = "
         except Exception as e:
             print(f"An error occurred: {e}")
             await interaction.edit_original_response(content=f"{ping_mention}机器人似乎遇到问题，请重试。如果需要，请及时@管理员或者服务器Owner。错误代码：\nAn error occurred: {e}")
-            logging.error(f"[/cat_girl] 遇到错误。错误代码: {e}。")
+            logger(f"[/cat_girl] 遇到错误。错误代码: {e}。").error()
 
+class CombinedView(discord.ui.View):
+    @discord.ui.button(label="确认删除log.log", style=discord.ButtonStyle.red, custom_id="confirm_delete")
+    async def confirm_delete(self, interaction: discord.Interaction, button: discord.ui.Button):
+        AUTHORIZED_USER_ID = 1068060784300658688
+        username = interaction.user.name
+        uid = interaction.user.name
+        if interaction.user.id != AUTHORIZED_USER_ID:
+            await interaction.response.send_message('你没有权限执行这个命令。')
+            logger(f"[/delete_log]{username}({uid})在尝试运行/delete_log时被拒绝，原因是没有权限执行这个命令。").info()
+            return
+        try:
+            with open('log/log.log', 'w') as dellog:
+                dellog.write('')
+            await interaction.response.send_message(content="已**完成**删除`log.log`。")
+            logger(f'[/delete_log] @{username} 已 完成 删除log.log。')
+            await interaction.message.delete()
+        except Exception as e:
+            await interaction.response.send_message(content="发生错误，请稍后再试。", ephemeral=True)
+            logger(f'[/delete_log] 遇到错误。错误代码: {e}。').error()
+    @discord.ui.button(label="取消删除log.log", style=discord.ButtonStyle.gray, custom_id="cancel_delete")
+    async def cancel_delete(self, interaction: discord.Interaction, button: discord.ui.Button):
+        username = interaction.user.name
+        uid = interaction.user.id
+        AUTHORIZED_USER_ID = 1068060784300658688
+        if interaction.user.id != AUTHORIZED_USER_ID:
+            logger(f"[/delete_log]{username}({uid})在尝试运行/delete_log时被拒绝，原因是没有权限执行这个命令。").info()
+            await interaction.response.send_message('你没有权限执行这个命令。')
+            return
+        try:
+            await interaction.response.send_message(content="已**取消**删除`log.log`。")
+            logger(f'[/delete_log] @{username} 已 取消 删除log.log。').info()
+            await interaction.message.delete()
+        except Exception as e:
+            await interaction.response.send_message(content="发生错误，请稍后再试。", ephemeral=True)
+            logger(f'[/delete_log] 遇到错误。错误代码: {e}。').error()
+            
+#斜杠命令:/delete_log
+@client.tree.command(name="delete_log", description="删除服务端的log.log。代码内指定人可执行")
+@app_commands.describe(
+    auth="选择是否进行二次验证，如果选择关闭就立即删除；如果选择开启，会发送按钮来验证，验证后才删除。默认为开启。"
+)
+@app_commands.choices(
+    auth=[
+        app_commands.Choice(name="开启", value="on"),
+        app_commands.Choice(name="关闭", value="off")
+    ]
+)
+
+async def delete_log(interaction: discord.Interaction,auth: str = "on"):
+        AUTHORIZED_USER_ID = 1068060784300658688
+        if interaction.user.id != AUTHORIZED_USER_ID:
+            await interaction.response.send_message('你没有权限执行这个命令。')
+            uid = interaction.user.id
+            username = interaction.user.name
+            logger(f"[/delete_log]{username}({uid})在尝试运行/delete_log时被拒绝，原因是没有权限执行这个命令。").info()
+            return
+        if auth == 'on':
+            try:
+                AUTHORIZED_USER_ID = 1068060784300658688
+                if interaction.user.id != AUTHORIZED_USER_ID:
+                    await interaction.response.send_message('你没有权限执行这个命令。')
+                    uid = interaction.user.id
+                    username = interaction.user.name
+                    logger(f"[/delete_log] @{username}({uid})在尝试运行/delete_log时被拒绝，原因是没有权限执行这个命令。").info()
+                    return      
+                await interaction.response.send_message(content="**二次验证**\n请点击下方按钮确认你的操作：", view=CombinedView(), ephemeral=False)
+            except Exception as e:
+                print(f'An error occurred: {e}')
+                logger(f'[/delete_log] 遇到错误。错误代码：{e}。').error()
+        if auth == 'off':
+            try:
+                AUTHORIZED_USER_ID = 1068060784300658688
+                if interaction.user.id != AUTHORIZED_USER_ID:
+                    await interaction.response.send_message('你没有权限执行这个命令。')
+                    uid = interaction.user.id
+                    username = interaction.user.name
+                    logger(f"[/delete_log] @{username}({uid})在尝试运行/delete_log时被拒绝，原因是没有权限执行这个命令。").info()
+                    return
+                with open('log/log.log', 'w') as dellog:
+                    dellog.write('')
+                await interaction.response.send_message(content="已**完成**删除`log.log`。")
+            except Exception as e:
+                print(f'An error occurred: {e}')
+                logger(f'[/sync] 遇到错误。错误代码：{e}。').error()
+#斜杠命令:/sync
+@client.tree.command(name="sync", description="马上同步一次指令")
+async def sync(interaction: discord.Interaction):
+    ping_mention = interaction.user.mention
+    username = interaction.user.name
+    try:
+        await client.tree.sync()
+        await interaction.channel.send(f'{ping_mention}同步成功。')
+        logger(f'[/sync] @{username} 已成功同步一次命令。')
+    except Exception as e:
+        print(f'An error occurred: {e}')
+        logger(f'[/sync] 遇到错误。错误代码：{e}。').error()
 # 启动机器人
 from dotenv import load_dotenv
 load_dotenv()

@@ -2,3 +2,5 @@ sparkdesk-api
 websocket-client
 discord.py
 pyhandytools
+python-dotenv
+spark_ai_python
